@@ -106,43 +106,42 @@ class panko::api (
     tag    => ['openstack', 'panko-package'],
   }
 
+  if $sync_db {
+    include ::panko::db::sync
+  }
+
   if $manage_service {
     if $enabled {
       $service_ensure = 'running'
     } else {
       $service_ensure = 'stopped'
     }
-  }
 
-  if $sync_db {
-    include ::panko::db::sync
-  }
+    if $service_name == $::panko::params::api_service_name {
+      service { 'panko-api':
+        ensure     => $service_ensure,
+        name       => $::panko::params::api_service_name,
+        enable     => $enabled,
+        hasstatus  => true,
+        hasrestart => true,
+        tag        => ['panko-service', 'panko-db-sync-service'],
+      }
+    } elsif $service_name == 'httpd' {
+      include ::apache::params
+      service { 'panko-api':
+        ensure => 'stopped',
+        name   => $::panko::params::api_service_name,
+        enable => false,
+        tag    => ['panko-service', 'panko-db-sync-service'],
+      }
+      Class['panko::db'] -> Service[$service_name]
+      Service <| title == 'httpd' |> { tag +> 'panko-db-sync-service' }
 
-  if $service_name == $::panko::params::api_service_name {
-    service { 'panko-api':
-      ensure     => $service_ensure,
-      name       => $::panko::params::api_service_name,
-      enable     => $enabled,
-      hasstatus  => true,
-      hasrestart => true,
-      tag        => ['panko-service', 'panko-db-sync-service'],
+      # we need to make sure panko-api/eventlet is stopped before trying to start apache
+      Service['panko-api'] -> Service[$service_name]
+    } else {
+      fail("Invalid service_name. Either panko/openstack-panko-api for running as a standalone service, or httpd for being run by a httpd server")
     }
-  } elsif $service_name == 'httpd' {
-    include ::apache::params
-    service { 'panko-api':
-      ensure => 'stopped',
-      name   => $::panko::params::api_service_name,
-      enable => false,
-      tag    => ['panko-service', 'panko-db-sync-service'],
-    }
-    Class['panko::db'] -> Service[$service_name]
-    Service <| title == 'httpd' |> { tag +> 'panko-db-sync-service' }
-
-    # we need to make sure panko-api/eventlet is stopped before trying to start apache
-    Service['panko-api'] -> Service[$service_name]
-  } else {
-    fail("Invalid service_name. Either panko/openstack-panko-api for \
-running as a standalone service, or httpd for being run by a httpd server")
   }
 
   panko_config {
