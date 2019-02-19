@@ -12,6 +12,14 @@
 #    (Optional) Use syslog for logging.
 #    Defaults to $::os_service_default
 #
+#  [*use_json*]
+#    (Optional) Use json for logging.
+#    Defaults to $::os_service_default
+#
+#  [*use_journal*]
+#    (Optional) Use journal for logging.
+#    Defaults to $::os_service_default
+#
 #  [*use_stderr*]
 #    (optional) Use stderr for logging
 #    Defaults to $::os_service_default
@@ -95,6 +103,8 @@
 
 class panko::logging(
   $use_syslog                    = $::os_service_default,
+  $use_json                      = $::os_service_default,
+  $use_journal                   = $::os_service_default,
   $use_stderr                    = $::os_service_default,
   $syslog_log_facility           = $::os_service_default,
   $log_dir                       = '/var/log/panko',
@@ -118,6 +128,8 @@ class panko::logging(
   oslo::log { 'panko_config':
     use_stderr                    => $use_stderr,
     use_syslog                    => $use_syslog,
+    use_json                      => $use_json,
+    use_journal                   => $use_journal,
     log_dir                       => $log_dir,
     log_file                      => $log_file,
     debug                         => $debug,
